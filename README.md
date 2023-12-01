@@ -53,6 +53,7 @@ env = gym.make("Training_ppo_first", render_mode="human")
 ```
 
 ### Initialize and Train the Model
+Here is an example of model with Proximal Policy Optimization (PPO) algorithm.
 ```python
 model = PPO("MlpPolicy", env, verbose=1,tensorboard_log="./First_version/",)
 checkpoint_callback = CheckpointCallback(save_freq=10000, save_path='./First_version/Model_temp', name_prefix='SRC')
@@ -80,7 +81,11 @@ for i in range(10000):
     env.render()
     if terminated or truncated:
         obs, info = env.reset()
-```
+``` 
+The following video demonstrates a training simulation specifically designed for needle grasping task.
+
+[demo](https://github.com/JinnWu686/SRC_gym/assets/147576462/81b13709-bba1-4802-8756-26bc2183cc09)
+
 
 ## Documentation
 This section describes the current settings of the RL environment, though it is flexible for further tuning and improvement.
@@ -122,7 +127,7 @@ it basically involves recovering all joints of robot arm and view of camera to t
 
 
 ### Step:
-'step' method is used to execute one timestep within the environment using the given action. At each timestep, an updated action_space is generated based on the current state. The code below shows how PSM is controlled by the command.
+'__step__' method is used to execute one timestep within the environment using the given action. At each timestep, an updated action_space is generated based on the current state. The code below shows how PSM is controlled by the command.
 ```python
 current = self.psm2.measured_jp()
 current = np.append(current,self.obs.state[6])
@@ -133,14 +138,19 @@ self.psm2.servo_jp(goal)
 The function also returns the termination and truncation state of the episode. For instance, in grasping process, the termination is true when disance between the needle and gripper is smaller than a threshold and gripper in a appropriate orientation. Meanwhile, truncation is activated when maximum timesteps is reached. Both termination and truncation will lead to the end of the current episode. 
 
 ### Reward:
-'reward' function computes the reward for the current action. The formula here shows how reward functions are designed for needle-grasping task.
+'__reward__' function computes the reward for the current action. The formula here shows how reward functions are designed for needle-grasping task.
 
 $$
 \begin{aligned}
 & \text{Priority}_{dist} = \begin{cases}
 100 & \text{if timestep} < 0.5 \cdot \text{max}\_\text{timestep} \\
 150 & \text{if timestep} \geq 0.5 \cdot \text{max}\_\text{timestep}
-\end{cases} \\
+\end{cases}
+\end{aligned}
+$$
+
+$$
+\begin{aligned}
 & \text{Priority}_{angle} = \begin{cases}
 10 & \text{if timestep} < 0.5 \cdot \text{max}\_\text{timestep} \\
 6 & \text{if timestep} \geq 0.5 \cdot \text{max}\_\text{timestep}
@@ -149,29 +159,29 @@ $$
 $$
 
 $$
-\text{Reward}_{dist} = \begin{cases}
-- \text{Priority}_{dist} \cdot \delta\text{dist} - \text{dist}/15 & \text{if } \delta_{dist} < 0 \\
-- \text{Priority}_{dist} \cdot 2 \cdot \delta\text{dist} - \text{dist}/15 & \text{if } \delta_{dist} \geq 0
+\text{Reward}\_{dist} = \begin{cases}
+\text{Priority}\_{dist} \cdot \delta\_{dist} - \text{dist}/15 & \text{if } \delta\_{dist} < 0 \\
+\text{Priority}\_{dist} \cdot 2 \cdot \delta\_{dist} - \text{dist}/15 & \text{if } \delta\_{dist} \geq 0
 \end{cases}
 $$
 
 $$
-\text{Reward}_{angle} = \begin{cases}
-- \text{Priority}\_{angle} \cdot {\delta\text{angle} - \text{angle}}/500 & \text{if } \delta_{angle} < 0 \\
-- \text{Priority}\_{angle} \cdot {2 \cdot \delta\text{angle} - \text{angle}}/500 & \text{if } \delta_{angle} \geq 0
+\text{Reward}\_{angle} = \begin{cases}
+\text{Priority}\_{angle} \cdot {\delta\_{angle} - \text{angle}}/500 & \text{if } \delta\_{angle} < 0 \\
+\text{Priority}\_{angle} \cdot {2 \cdot \delta\_{angle} - \text{angle}}/500 & \text{if } \delta\_{angle} \geq 0
 \end{cases}
 $$
 
 $$
-\text{Reward}_{time} = -0.004
+\text{Reward}\_{time} = -0.004
 $$
 
 $$
-\text{Reward}_{success} = \text{terminate}*50
+\text{Reward}\_{success} = \text{terminate}*50
 $$
 
 $$
-\text{Reward}_{grasp} = \text{Reward}_{dist} + \text{Reward}_{angle} + \text{Reward}_{time} + \text{Reward}_{success}
+\text{Reward}\_{grasp} = \text{Reward}\_{dist} + \text{Reward}\_{angle} + \text{Reward}\_{time} + \text{Reward}\_{success}
 $$
 
 Here dist and angle represent the end-effector translational distance and orientation error between the current and goal state.
