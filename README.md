@@ -38,7 +38,17 @@ model.learn(total_timesteps=10000)
 ## RL Training
 This section introduce the basic procedure for model training with defined Gymnasium environment.
 
-### Register the Environment
+### Run the SRC Environment
+Make sure ROS and SRC is running before moving forward to the following steps. You can simply run the following command or refer to this [link]() for details.
+
+```
+roscore
+```
+```
+~/ambf/bin/lin-x86_64/ambf_simulator --launch_file ~/ambf/surgical_robotics_challenge/launch.yaml -l 0,1,3,4,13,14 -p 200 -t 1 --override_max_comm_freq 120
+```
+
+### Register the Gymnasium Environment
 ```python
 import gymnasium as gym
 from stable_baselines3.common.evaluation import evaluate_policy
@@ -118,7 +128,7 @@ self.ecm = ECM(self.simulation_manager, 'CameraFrame')
 ```
 
 ### Reset:
-'reset' function is also a necessary component in Gymnasium environment, It resets the environment to its initial state at the beginning of each episode. In our case,
+'__reset__' function is also a necessary component in Gymnasium environment, It resets the environment to its initial state at the beginning of each episode. In our case,
 it basically involves recovering all joints of robot arm and view of camera to their original positions. Code belows shows the setting initial positions of PSMs.
 ```
     self.psm1.servo_jp([0.01102378,-0.01772329,0.10328061,-0.00375491,-0.03087782,0.21085757])
@@ -185,5 +195,3 @@ $$
 $$
 
 Here dist and angle represent the end-effector translational distance and orientation error between the current and goal state.
-
-
