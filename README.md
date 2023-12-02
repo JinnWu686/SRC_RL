@@ -39,7 +39,7 @@ model.learn(total_timesteps=10000)
 This section introduce the basic procedure for model training with defined Gymnasium environment.
 
 ### Run the SRC Environment
-Make sure ROS and SRC is running before moving forward to the following steps. You can simply run the following command or refer to this [link]() for details.
+Make sure ROS and SRC is running before moving forward to the following steps. You can simply run the following command or refer to this [link](https://github.com/surgical-robotics-ai/surgical_robotics_challenge) for details.
 
 ```
 roscore
