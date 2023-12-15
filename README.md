@@ -106,15 +106,15 @@ This is the main environment class that extends gym.Env. It defines the action s
 ### Initialization:
 '__init__' function initializes the environment, setting up the action and observation spaces, including their upper and lower boundaries. 
 
-For instance, the action space (7*1 array) in this case represents action step for 6 joints of PSM and state of gripper. 
-Discrete action space is used in this case defined as follows, each joint will be assign to a value from [0,1,2]:
+For instance, the action space (7*1 array) in this case represents 6D pose of PSM end-effector and state of gripper. 
+Discrete action space is used in this case defined as follows, each component will be assign to a value from [0,1,2]:
 ```python
 action_space = spaces.MultiDiscrete([3,3,3,3,3,3,3])
 ```
 The corresponding boundaries are as follows, to ensure each joint won't exceed their physical limit.
 ```python
-self.action_lims_low = np.array([np.deg2rad(-91.96), np.deg2rad(-60), -0.0, np.deg2rad(-175), np.deg2rad(-90), np.deg2rad(-85), 0],dtype=np.float32)
-self.action_lims_high = np.array([np.deg2rad(91.96), np.deg2rad(60), 0.240, np.deg2rad(175), np.deg2rad(90), np.deg2rad(85), 1],dtype=np.float32)
+self.action_lims_low = np.array([-0.15, -0.15, -0.25, np.deg2rad(-350), np.deg2rad(-85), np.deg2rad(-260), 0],dtype=np.float32)
+self.action_lims_high = np.array([0.15, 0.15, 0.05, np.deg2rad(-10), np.deg2rad(85), np.deg2rad(260), 1],dtype=np.float32)
 ```
 
 It also builds connection with simulator components like PSM and ECM with code like below:
@@ -131,19 +131,18 @@ self.ecm = ECM(self.simulation_manager, 'CameraFrame')
 '__reset__' function is also a necessary component in Gymnasium environment, It resets the environment to its initial state at the beginning of each episode. In our case,
 it basically involves recovering all joints of robot arm and view of camera to their original positions. Code belows shows the setting initial positions of PSMs.
 ```
-    self.psm1.servo_jp([0.01102378,-0.01772329,0.10328061,-0.00375491,-0.03087782,0.21085757])
-    self.psm2.servo_jp([-0.00575528,-0.0083593,0.10328144,0.00249357,-0.01751206,-0.13059567])
+self.psm1.servo_jp([0.01102378,-0.01772329,0.10328061,-0.00375491,-0.03087782,0.21085757])
+self.psm2.servo_jp([-0.00575528,-0.0083593,0.10328144,0.00249357,-0.01751206,-0.13059567])
 ```
 
 
 ### Step:
 '__step__' method is used to execute one timestep within the environment using the given action. At each timestep, an updated action_space is generated based on the current state. The code below shows how PSM is controlled by the command.
 ```python
-current = self.psm2.measured_jp()
-current = np.append(current,self.obs.state[6])
-action_step = (action-1)*np.array([0.002,0.002,0.0001,0.002,0.002,0.002,0.001])*30
-goal = np.clip(current+action_step, self.action_lims_low, self.action_lims_high)
-self.psm2.servo_jp(goal)
+action_discount = np.clip(0.1,0.4,10/3*(self.obs.dist-0.01)+0.1)
+action_step = (action-1)*np.array([0.001,0.001,0.001,0.02,0.02,0.02,0.2])*action_discount
+self.psm2_goal = np.clip(current+action_step, self.action_lims_low[0:7], self.action_lims_high[0:7])
+self.psm2_step(self.psm2_goal)
 ```
 The function also returns the termination and truncation state of the episode. For instance, in grasping process, the termination is true when disance between the needle and gripper is smaller than a threshold and gripper in a appropriate orientation. Meanwhile, truncation is activated when maximum timesteps is reached. Both termination and truncation will lead to the end of the current episode. 
 
@@ -153,8 +152,8 @@ The function also returns the termination and truncation state of the episode. F
 $$
 \begin{aligned}
 & \text{Priority}_{dist} = \begin{cases}
-100 & \text{if timestep} < 0.5 \cdot \text{max}\_\text{timestep} \\
-150 & \text{if timestep} \geq 0.5 \cdot \text{max}\_\text{timestep}
+120 & \text{if timestep} < 0.5 \cdot \text{max}\_\text{timestep} \\
+180 & \text{if timestep} \geq 0.5 \cdot \text{max}\_\text{timestep}
 \end{cases}
 \end{aligned}
 $$
@@ -162,7 +161,7 @@ $$
 $$
 \begin{aligned}
 & \text{Priority}_{angle} = \begin{cases}
-10 & \text{if timestep} < 0.5 \cdot \text{max}\_\text{timestep} \\
+12 & \text{if timestep} < 0.5 \cdot \text{max}\_\text{timestep} \\
 6 & \text{if timestep} \geq 0.5 \cdot \text{max}\_\text{timestep}
 \end{cases}
 \end{aligned}
@@ -187,11 +186,15 @@ $$
 $$
 
 $$
-\text{Reward}\_{success} = \text{terminate}*50
+\text{Reward}\_{success} = 60 \text{   if success}
 $$
 
 $$
-\text{Reward}\_{grasp} = \text{Reward}\_{dist} + \text{Reward}\_{angle} + \text{Reward}\_{time} + \text{Reward}\_{success}
+\text{Reward}\_{range} = -80 \text{   if out of range}
+$$
+
+$$
+\text{Reward}\_{grasp} = \text{Reward}\_{dist} + \text{Reward}\_{angle} + \text{Reward}\_{time} + \text{Reward}\_{success} + \text{Reward}\_{range}
 $$
 
 Here dist and angle represent the end-effector translational distance and orientation error between the current and goal state.
